@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>YT + Phụ Đề</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#2a2a2a;
+  --text:#fff;--text2:rgba(255,255,255,.6);--text3:rgba(255,255,255,.3);
+  --red:#ff2626;--border:rgba(255,255,255,.1);--radius:12px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
+
+/* SETUP */
+#setup{min-height:100vh;display:flex;flex-direction:column;padding:20px;padding-top:max(env(safe-area-inset-top),24px);padding-bottom:max(env(safe-area-inset-bottom),24px);max-width:520px;margin:0 auto;width:100%}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:36px}
+.brand-icon{width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:20px;height:20px;fill:#fff}
+.brand-name{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.field{margin-bottom:22px}
+.field-label{font-size:11px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.row{display:flex;gap:8px}
+input[type=url]{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;font-size:15px;color:var(--text);outline:none;-webkit-appearance:none;transition:border-color .2s}
+input[type=url]:focus{border-color:rgba(255,255,255,.3)}
+input[type=url]::placeholder{color:var(--text3)}
+.btn-sm{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn-sm:hover{background:var(--bg3);color:var(--text)}
+.btn-sm svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.srt-drop{border:1.5px dashed var(--border);border-radius:var(--radius);padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s}
+.srt-drop:hover,.srt-drop.drag{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.03)}
+.srt-drop.ok{border-color:rgba(72,199,142,.6);background:rgba(72,199,142,.05)}
+.srt-icon{font-size:28px;margin-bottom:6px}
+.srt-title{font-size:14px;color:var(--text2);margin-bottom:3px}
+.srt-drop.ok .srt-title{color:#48c78e}
+.srt-hint{font-size:12px;color:var(--text3)}
+#srt-file{display:none}
+.err{background:rgba(255,38,38,.1);border:1px solid rgba(255,38,38,.3);border-radius:10px;padding:11px 14px;font-size:13px;color:#ff7070;margin-bottom:16px;display:none}
+.btn-play{width:100%;background:var(--red);border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;margin-top:auto}
+.btn-play svg{width:18px;height:18px;fill:#fff}
+.btn-play:active{transform:scale(.98)}
+.btn-play:disabled{background:var(--bg3);color:var(--text3);cursor:not-allowed;transform:none}
+
+/* PLAYER */
+#player{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.video-wrap{position:relative;background:#000;flex-shrink:0;width:100%}
+#yt-player{display:block;width:100%;aspect-ratio:16/9}
+.sub-overlay{position:absolute;bottom:10px;left:0;right:0;text-align:center;pointer-events:none;padding:0 10px;z-index:5}
+#sub-text{display:inline;background:rgba(0,0,0,.85);color:#fff;font-size:16px;line-height:1.55;padding:4px 12px;border-radius:5px;max-width:96%}
+#sub-text:empty{display:none}
+
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.btn-back{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;flex-shrink:0}
+.btn-back:hover{background:var(--bg3);color:var(--text)}
+.btn-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.prog-wrap{flex:1;height:28px;display:flex;align-items:center}
+.prog-track{width:100%;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--red);border-radius:2px;width:0%}
+.clock{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:34px;text-align:right}
+
+.sub-panel{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:none}
+.sp-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sp-row:last-child{margin-bottom:0}
+.sp-label{font-size:12px;color:var(--text3);min-width:58px}
+.tog{display:flex;gap:6px}
+.tog-btn{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s}
+.tog-btn.on{background:rgba(255,38,38,.18);border-color:rgba(255,38,38,.5);color:#ff7070}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--bg3);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--red);border-radius:50%;cursor:pointer}
+.sp-val{font-size:12px;color:var(--text3);min-width:22px;text-align:right}
+
+.sub-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative; /* Thêm dòng này */
+}
+.sub-list-hd{font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:12px 14px 6px}
+.sub-item{display:flex;gap:10px;padding:9px 14px;cursor:pointer;border-radius:0;transition:background .1s}
+.sub-item:hover{background:rgba(255,255,255,.04)}
+.sub-item.active{background:rgba(255,38,38,.1)}
+.si-time{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;min-width:36px;padding-top:2px;flex-shrink:0}
+.si-text{font-size:13px;color:var(--text2);line-height:1.45}
+.sub-item.active .si-text{color:#fff}
+.sub-item.active .si-time{color:var(--red)}
+.no-sub{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;line-height:1.7}
+.no-sub b{display:block;font-size:15px;color:var(--text2);margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="brand">
+    <div class="brand-icon"><svg viewBox="0 0 24 24"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 000-1.69L9.54 5.98A1 1 0 008 6.82z"/></svg></div>
+    <span class="brand-name">YT + Phụ Đề</span>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Link YouTube</div>
+    <div class="row">
+      <input type="url" id="url-in" placeholder="https://youtube.com/watch?v=…" autocomplete="off" spellcheck="false"/>
+      <button class="btn-sm" id="btn-paste">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Dán
+      </button>
+    </div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">File phụ đề .srt (tuỳ chọn)</div>
+    <div class="srt-drop" id="srt-drop">
+      <div class="srt-icon">📄</div>
+      <div class="srt-title" id="srt-title">Nhấn để chọn hoặc kéo thả file .srt</div>
+      <div class="srt-hint">Hỗ trợ UTF-8 · tiếng Việt có dấu</div>
+    </div>
+    <input type="file" id="srt-file" accept=".srt,.txt">
+  </div>
+
+  <div class="err" id="err"></div>
+  <button class="btn-play" id="btn-play" disabled>
+    <svg viewBox="0 0 24 24"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 000-1.69L9.54 5.98A1 1 0 008 6.82z"/></svg>
+    Phát video
+  </button>
+</div>
+
+<div id="player">
+  <div class="video-wrap">
+    <div id="yt-player"></div>
+    <div class="sub-overlay"><span id="sub-text"></span></div>
+  </div>
+
+  <div class="topbar">
+    <button class="btn-back" id="btn-back">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Quay lại
+    </button>
+    <div class="prog-wrap"><div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div></div>
+    <div class="clock" id="clock">0:00</div>
+  </div>
+
+  <div class="sub-panel" id="sub-panel">
+    <div class="sp-row">
+      <span class="sp-label">Phụ đề</span>
+      <div class="tog">
+        <button class="tog-btn on" id="tog-on">Bật</button>
+        <button class="tog-btn" id="tog-off">Tắt</button>
+      </div>
+    </div>
+    <div class="sp-row">
+      <span class="sp-label">Cỡ chữ</span>
+      <input type="range" id="size-sl" min="12" max="26" value="16" step="1">
+      <span class="sp-val" id="size-v">16</span>
+    </div>
+  </div>
+
+  <div class="sub-list" id="sub-list">
+    <div id="sub-items"></div>
+    <div class="no-sub" id="no-sub"><b>Chưa có phụ đề</b>Quay lại và chọn file .srt để thêm phụ đề</div>
+  </div>
+</div>
+
+<!-- Load YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+// ── STATE ──
+let subs=[], subOn=true, ytPlayer=null, ticker=null;
+
+// ── HELPERS ──
+function getVideoId(url){
+  const m=url.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+function parseSrt(txt){
+  const blocks=txt.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split(/\n{2,}/);
+  const out=[];
+  for(const b of blocks){
+    const lines=b.trim().split('\n');
+    const ti=lines.findIndex(l=>l.includes('-->'));
+    if(ti<0)continue;
+    const [a,b2]=lines[ti].split('-->');
+    const text=lines.slice(ti+1).join(' ').replace(/<[^>]*>/g,'').trim();
+    if(!text)continue;
+    out.push({start:toSec(a),end:toSec(b2),text});
+  }
+  return out.sort((a,b)=>a.start-b.start);
+}
+function toSec(s){
+  const m=s.trim().match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+  return m?(+m[1])*3600+(+m[2])*60+(+m[3])+(+m[4])/1000:0;
+}
+function fmt(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+(s%60<10?'0':'')+s%60;}
+
+// ── ELEMENTS ──
+const $=id=>document.getElementById(id);
+const urlIn=$('url-in'), btnPaste=$('btn-paste'), srtDrop=$('srt-drop'),
+      srtFile=$('srt-file'), srtTitle=$('srt-title'), btnPlay=$('btn-play'),
+      errDiv=$('err'), setup=$('setup'), playerEl=$('player'),
+      subText=$('sub-text'), progFill=$('prog-fill'), clock=$('clock'),
+      btnBack=$('btn-back'), subPanel=$('sub-panel'), subItems=$('sub-items'),
+      noSub=$('no-sub'), togOn=$('tog-on'), togOff=$('tog-off'),
+      sizeSl=$('size-sl'), sizeV=$('size-v');
+
+// ── URL ──
+urlIn.addEventListener('input',()=>{
+  btnPlay.disabled=!getVideoId(urlIn.value.trim());
+  errDiv.style.display='none';
+});
+btnPaste.addEventListener('click',async()=>{
+  try{const t=await navigator.clipboard.readText();urlIn.value=t;urlIn.dispatchEvent(new Event('input'));}
+  catch{urlIn.focus();urlIn.select();}
+});
+
+// ── SRT ──
+srtDrop.addEventListener('click',()=>srtFile.click());
+['dragover'].forEach(ev=>srtDrop.addEventListener(ev,e=>{e.preventDefault();srtDrop.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>srtDrop.addEventListener(ev,e=>{
+  e.preventDefault();srtDrop.classList.remove('drag');
+  if(ev==='drop'&&e.dataTransfer.files[0])readSrt(e.dataTransfer.files[0]);
+}));
+srtFile.addEventListener('change',()=>{if(srtFile.files[0])readSrt(srtFile.files[0]);});
+function readSrt(f){
+  const r=new FileReader();
+  r.onload=e=>{
+    subs=parseSrt(e.target.result);
+    if(!subs.length){srtTitle.textContent='❌ Không đọc được — thử file khác';return;}
+    srtDrop.classList.add('ok');
+    srtTitle.textContent='✓ '+f.name+' ('+subs.length+' dòng)';
+  };
+  r.readAsText(f,'UTF-8');
+}
+
+// ── PLAY ──
+btnPlay.addEventListener('click',()=>{
+  const vid=getVideoId(urlIn.value.trim());
+  if(!vid){errDiv.textContent='Link không hợp lệ.';errDiv.style.display='block';return;}
+  setup.style.display='none';
+  playerEl.style.display='flex';
+  noSub.style.display=subs.length?'none':'block';
+  if(subs.length){subPanel.style.display='block';renderList();}
+  initPlayer(vid);
+});
+
+// ── YT PLAYER ──
+function initPlayer(vid){
+  if(ytPlayer){ytPlayer.destroy();ytPlayer=null;}
+  clearInterval(ticker);
+  ytPlayer=new YT.Player('yt-player',{
+    videoId:vid,
+    playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1},
+    events:{
+      onReady:()=>ytPlayer.playVideo(),
+      onStateChange:e=>{
+        if(e.data===YT.PlayerState.PLAYING)startTicker();
+        else clearInterval(ticker);
+      }
+    }
+  });
+}
+function startTicker(){
+  clearInterval(ticker);
+  ticker=setInterval(()=>{
+    if(!ytPlayer||typeof ytPlayer.getCurrentTime!=='function')return;
+    const t=ytPlayer.getCurrentTime()||0;
+    const dur=ytPlayer.getDuration()||0;
+    // subtitle
+    if(subOn&&subs.length){
+      const s=subs.find(s=>t>=s.start&&t<=s.end);
+      subText.textContent=s?s.text:'';
+    }
+    // progress
+    if(dur>0)progFill.style.width=Math.min(100,(t/dur)*100)+'%';
+    clock.textContent=fmt(t);
+    highlightItem(t);
+  },300);
+}
+
+// ── BACK ──
+btnBack.addEventListener('click',()=>{
+  clearInterval(ticker);
+  if(ytPlayer){ytPlayer.stopVideo();ytPlayer.destroy();ytPlayer=null;}
+  // recreate placeholder div (destroyed by YT API)
+  const wrap=document.querySelector('.video-wrap');
+  const old=$('yt-player');
+  if(old)old.remove();
+  const div=document.createElement('div');div.id='yt-player';
+  wrap.insertBefore(div,wrap.firstChild);
+  playerEl.style.display='none';
+  setup.style.display='flex';
+  subText.textContent='';progFill.style.width='0%';clock.textContent='0:00';
+});
+
+// ── SUB LIST ──
+function renderList(){
+  subItems.innerHTML='';
+  const hd=document.createElement('div');hd.className='sub-list-hd';hd.textContent='Danh sách phụ đề';
+  subItems.appendChild(hd);
+  subs.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='sub-item';d.dataset.i=i;
+    d.innerHTML=`<span class="si-time">${fmt(s.start)}</span><span class="si-text">${s.text}</span>`;
+    d.addEventListener('click',()=>{
+      if(ytPlayer&&ytPlayer.seekTo)ytPlayer.seekTo(s.start,true);
+    });
+    subItems.appendChild(d);
+  });
+}
+function highlightItem(t){
+  let ai=-1;
+  subs.forEach((s,i)=>{if(t>=s.start&&t<=s.end)ai=i;});
+  
+  // Lấy container chứa danh sách phụ đề
+  const listContainer = document.getElementById('sub-list');
+
+  subItems.querySelectorAll('.sub-item').forEach((el,i)=>{
+    const now=i===ai;
+    if(now===el.classList.contains('active'))return;
+    el.classList.toggle('active',now);
+    
+    if(now) {
+      // Tính toán để đưa dòng phụ đề ra giữa màn hình danh sách
+      const scrollPos = el.offsetTop - (listContainer.clientHeight / 2) + (el.clientHeight / 2);
+      
+      listContainer.scrollTo({
+        top: scrollPos,
+        behavior: 'smooth'
+      });
+    }
+  });
+}
+
+// ── CONTROLS ──
+togOn.addEventListener('click',()=>{subOn=true;togOn.classList.add('on');togOff.classList.remove('on');});
+togOff.addEventListener('click',()=>{subOn=false;togOff.classList.add('on');togOn.classList.remove('on');subText.textContent='';});
+sizeSl.addEventListener('input',()=>{sizeV.textContent=sizeSl.value;subText.style.fontSize=sizeSl.value+'px';});
+
+// ── YT API READY CALLBACK (global) ──
+window.onYouTubeIframeAPIReady=function(){};
+</script>
+</body>
+</html>
